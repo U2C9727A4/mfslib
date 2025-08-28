@@ -1,0 +1,5 @@
+Use generic read-write callback pairs for stream agnosticness -
+Support concurrent clients -
+Support virtual files via read-write callback pairs -
+Kill connection after 1 minute of inactivity -
+Support static buffers for path and data -

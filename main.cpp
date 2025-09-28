@@ -67,7 +67,7 @@ typedef struct {
 // EXERCISE CAUTION!
 // This code is built for single-core MCUs. with built-in concurrency to handle multiple clients at the "same" time.
 // It is NOT thread-safe!
-class server {
+class mfs_server {
     char* path_buffer;
     char* data_buffer;
 
@@ -162,7 +162,7 @@ class server {
         }
 
         for (unsigned int i = 0; i < this->files_bsize; i++) {
-            if (this->memcmp(path, this->files[i].path, psize, this->files[i].path_size)) continue;
+            if (this->memcmp(path, this->files[i].path, psize, this->strlen(this->files[i].path, this->files[i].path_size))) continue;
             return i;
         }
         return -1;
@@ -390,11 +390,18 @@ public:
 
     // Finally, the quintessential loop that serves the clients of MFS.
     void serve_clients() {
+        mfs_message_t noop_response;
+        noop_response.data = 0;
+        noop_response.path = 0;
+        noop_response.dsize = 0;
+        noop_response.psize = 0;
+        noop_response.op = RESPONSE_OF(OP_NOOP);
         for (unsigned int i = 0; i < this->clients_len; i++) {
             if (this->clients[i].client == 0) continue;
 
             if (this->clients[i].timer_end <= this->millis()) {
                 // Client has expired.
+                this->send_mfs_error(noop_response, this->clients[i].client, 3000);
                 this->drop_client(this->clients[i].client);
                 continue;
             }
@@ -413,16 +420,13 @@ public:
                 long long file_index = this->get_file_index(client_request.path, strlen(client_request.path, client_request.psize));
                 if (file_index == -1) {
                     // File does not exist.
+                    if (client_request.op == OP_LS | client_request.op == OP_NOOP) goto discard_file_nonexistent;
                     this->send_mfs_error(client_request, this->clients[i].client, 1000);
                     continue;
                 }
+                discard_file_nonexistent:
 
-                mfs_message_t noop_response;
-                noop_response.data = 0;
-                noop_response.path = 0;
-                noop_response.dsize = 0;
-                noop_response.psize = 0;
-                noop_response.op = RESPONSE_OF(OP_NOOP);
+
 
                 // now, we parse the opcode.
                 switch (client_request.op) {
@@ -521,7 +525,7 @@ public:
     }
 
     // Finally; The constuctor. The beginning, of it all.
-    new_server(read_cb readerf, write_cb writerf, accept_cb acceptf, close_cb closef, get_time_cb timef, available_cb availf, char* dbuf, unsigned int dbuf_size, char* pbuf, unsigned int pbuf_size, client_handlers_t* cbuf, unsigned int cbuf_size, mfs_file_t* fbuf, unsigned int fbuf_size) {
+    mfs_server(read_cb readerf, write_cb writerf, accept_cb acceptf, close_cb closef, get_time_cb timef, available_cb availf, char* dbuf, unsigned int dbuf_size, char* pbuf, unsigned int pbuf_size, client_handlers_t* cbuf, unsigned int cbuf_size, mfs_file_t* fbuf, unsigned int fbuf_size) {
         this->accept_client = acceptf;
         this->client_available = availf;
         this->client_killer = closef;

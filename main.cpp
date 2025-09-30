@@ -277,6 +277,7 @@ class mfs_server {
                 }
 
                 processed_data += chunk_size;
+                break;
             }
 
             chunk_size = 0;
@@ -290,11 +291,12 @@ class mfs_server {
                     // So, this is a really bad situation. We wanna consume data, yet we can't.
                     // Drop client.
                     this->drop_client(client);
+                    break;
                 }
 
                 processed_data += chunk_size;
             }
-            this->send_mfs_error(empty_error_msg, client, 100);
+            this->send_mfs_error(empty_error_msg, client, 001);
             return empty_error_msg;
         }
         //========================================================================================
